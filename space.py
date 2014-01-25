@@ -11,12 +11,11 @@ white = 255,255,255
 degs = math.pi / 180
 debug = False
 scale = 1              #graphics scale factor (must be integer)
-framerate = 60
 
 stop_limit = 0.005  #when speed is less than this, ship stops
 drag = 0.01      #should be less than 1!!!
 accel = 0.07
-turn = 0.2
+turn = 0.3
 debounce = 10
 damper = False
 
