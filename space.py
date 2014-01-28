@@ -12,18 +12,22 @@ degs = math.pi / 180
 debug = False
 scale = 1              #graphics scale factor (must be integer)
 
-stop_limit = 0.005  #when speed is less than this, ship stops
-drag = 0.01      #should be less than 1!!!
-accel = 0.07
-turn = 0.3
-debounce = 10
+stop_limit = 0.01  #when speed is less than this, ship stops
+drag = 0.01        #for i.damper, should be less than 1!!!
+accel = 0.07       #acceleration
+turn = 0.3         #turn speed
+debounce = 10      #debounce no. of frames for I and V toggle keys
 damper = False
+limiter = True
+limit = 5         #v.limiter limit
 
 bounce = 0
 heading = 0
 theta = 0
 toturn = 0
 reverse = 0
+new_vx = 0
+new_vy = 0
 
 pygame.init()
 screen = pygame.display.set_mode((screenx,screeny))
@@ -42,6 +46,7 @@ class Player(object):
 		self.sy = screeny/2
 		self.vx = 0
 		self.vy = 0
+		self.v = 0
 		self.angle = -90
 
 player = Player()
@@ -57,6 +62,8 @@ while True:
 	#correct player.angle so that it is between -pi and +pi
 	if player.angle > 180: player.angle -= 360
 	if player.angle < -180: player.angle += 360
+	
+	player.v = ((player.vx**2)+(player.vy**2))**0.5
 	
 	#calculate the player's true heading (the actual direction of travel)
 	if player.vx == 0:
@@ -117,20 +124,32 @@ while True:
 			player.angle += (toturn/degs)
 
 	if keys[K_UP]: #thrust!
-		player.vx += (math.cos((player.angle)*degs)) * accel
-		player.vy += (math.sin((player.angle)*degs)) * accel
+		new_vx = player.vx
+		new_vy = player.vy
+		new_vx += (math.cos((player.angle)*degs)) * accel
+		new_vy += (math.sin((player.angle)*degs)) * accel
+		new_v = ((new_vx**2)+(new_vy**2))**0.5
+		if not new_v > limit:
+			player.vx = new_vx
+			player.vy = new_vy
 		
-	if keys[K_SPACE] and bounce == 0: #toggle inertial dampers
-		damper = not(damper)
+	if keys[K_i] and bounce == 0: #toggle inertial dampers
+		damper = not damper
 		bounce = debounce
-		if debug:
-			if damper:
-				print "Inertial dampers ON"
-			else:
-				print "Intertial dampers OFF"
+	
+	if keys[K_v] and bounce == 0: #toggle velocity limit
+		limiter = not limiter
+		bounce = debounce
 			
 	#count-down de-bounce timer to 0
 	if bounce > 0: bounce -= 1
+	
+	#apply velocity limit by undoing the acceleration
+		#...simply stopping the acceleration key from working
+		#means you can't even slow down
+	#if limiter and player.v > limit:
+		#player.vx += -((math.cos((reverse)*degs)) * accel)
+		#player.vy += -((math.sin((reverse)*degs)) * accel)
 	
 	#debug output
 	if debug:
@@ -172,13 +191,21 @@ while True:
 	
 	#draw graphics
 	screen.fill(black)
-	pygame.draw.polygon(screen, white, points, 2)
-	panel_y = screeny-(40*scale)
+	
+	pygame.draw.polygon(screen, white, points, 2) #ship
+	
+	panel_y = screeny-(40*scale) #panel
 	screen.blit(panel,(0,panel_y))
-	if damper:
+	
+	if damper: #i.damper indicator
 		screen.blit(grn,(54*scale,(panel_y+22*scale)))
 	else:
 		screen.blit(red,(54*scale,(panel_y+22*scale)))
+	
+	if limiter: #v.limiter indicator
+		screen.blit(grn,(54*scale,(panel_y+11*scale)))
+	else:
+		screen.blit(red,(54*scale,(panel_y+11*scale)))
 	
 	#limit frame rate
 	clock.tick(framerate)
